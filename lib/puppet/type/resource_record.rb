@@ -67,7 +67,7 @@ Puppet::Type.newtype(:resource_record) do
 
   def self.title_patterns
     # Cheating a bit with forcing a single title value. 
-    [[%r{(.*)(?: |_)+}m, [[:name]]]]
+    [[%r{(.*)(?: |_)+}m, [[:record]]]]
   end
 end
     #  desc: 'full name, space, zone (explicitly defined), space, type, space, data',
