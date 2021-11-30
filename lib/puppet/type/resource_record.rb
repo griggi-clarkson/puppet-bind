@@ -16,13 +16,8 @@ Puppet::Type.newtype(:resource_record) do
           **Autorequires**: If Puppet is managing the zone that this resource record belongs to,
           the resource record will autorequire the zone.
         EOS
-  newproperty(:ensure) do
-    desc 'Whether this resource record should be present or absent on the target system.'
-    newvalue(:present)
-    newvalue(:absent)
-    defaultto :present
-  end
-  newproperty(:record) do
+  ensurable
+  newproperty(:name) do
     desc 'The name of the resource record, also known as the owner or label.'
     isnamevar
     validate do |value|
@@ -68,7 +63,7 @@ Puppet::Type.newtype(:resource_record) do
 
   def self.title_patterns
     # Cheating a bit with forcing a single title value. 
-    [[%r{(.*)(?:_+)}m, [[:record]]]]
+    [[%r{(.*)(?: |_)+}m, [[:name]]]]
   end
 end
     #  desc: 'full name, space, zone (explicitly defined), space, type, space, data',

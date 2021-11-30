@@ -73,7 +73,7 @@ Puppet::Type.type(:resource_record).provide(:ruby) do
 
   def self.prefetch(resources)
     instances.each do |prov|
-      if (resource = resources[prov.title])
+      if (resource = resources[prov.name])
         resource.provider = prov
       end
     end
