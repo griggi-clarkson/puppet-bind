@@ -212,7 +212,10 @@ define bind::zone (
     $resource_records.each |$rrname, $attribs| {
       resource_record { $rrname :
         zone => $zone_name,
-        *    => $attribs,
+        name => $attribs['record'],
+        type => $attribs['type'],
+        data => $attribs['data'],
+        ttl  => $attribs['ttl'],
       }
     }
   }
