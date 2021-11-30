@@ -19,7 +19,7 @@ Puppet::Type.newtype(:resource_record) do
   ensurable
   def name
   # whoever wrote the documentation for puppet providers and types should be drawn and quartered
-    "#{self[:record]}"
+    "#{self[:record]} #{self[:zone]} #{self[:type]} #{self[:data]}"
   end
   newproperty(:record) do
     desc 'The name of the resource record, also known as the owner or label.'

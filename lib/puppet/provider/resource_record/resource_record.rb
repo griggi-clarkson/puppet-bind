@@ -56,7 +56,9 @@ Puppet::Type.type(:resource_record).provide(:ruby) do
   end
 
   def self.instances
+    Puppet.debug("----  Instances start  ----")
     parse_records
+    Puppet.debug("----  Instances end  ----")
   end
 
   def create
@@ -72,14 +74,17 @@ Puppet::Type.type(:resource_record).provide(:ruby) do
   end
 
   def self.prefetch(resources)
+    Puppet.debug("----  Prefetch start  ----")
     instances.each do |prov|
       if (resource = resources[prov.name])
         resource.provider = prov
       end
     end
+    Puppet.debug("----  Prefetch end  ----")
   end
 
   def flush
+    Puppet.debug("----  Flush start  ----")
     if @property_flush[:ensure] == :absent
       # Delete record
       Puppet.notice("Deleting '#{resource}'")
@@ -117,6 +122,7 @@ Puppet::Type.type(:resource_record).provide(:ruby) do
 
     # Refresh state - might not be necessary? Need to just update state on a per-resource basis
     @property_hash = self.class.parse_records
+    Puppet.debug("----  Flush end  ----")
   end
 
   def create
