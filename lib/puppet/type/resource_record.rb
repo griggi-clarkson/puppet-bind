@@ -2,7 +2,8 @@
 require 'puppet/resource_api'
 
 Puppet::Type.newtype(:resource_record) do
-  @doc = "@summary a DNS resource record type
+  @doc = <<~EOS,
+          @summary a DNS resource record type
           @example AAAA record in the example.com. zone
             resource_record { 'foo.example.com.':
               ensure => 'present',
@@ -14,7 +15,7 @@ Puppet::Type.newtype(:resource_record) do
 
           **Autorequires**: If Puppet is managing the zone that this resource record belongs to,
           the resource record will autorequire the zone.
-        "
+        EOS
   ensurable
   def name
   # whoever wrote the documentation for puppet providers and types should be drawn and quartered
