@@ -17,10 +17,10 @@ Puppet::Type.newtype(:resource_record) do
           the resource record will autorequire the zone.
         EOS
   ensurable
-#  def name
+  def name
   # whoever wrote the documentation for puppet providers and types should be drawn and quartered
-#    "#{self[:record]} #{self[:zone]} #{self[:type]} #{self[:data]}"
-#  end
+    "#{self[:record]} #{self[:zone]} #{self[:type]} #{self[:data]}"
+  end
   newproperty(:record) do
     desc 'The name of the resource record, also known as the owner or label.'
     isnamevar
