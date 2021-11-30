@@ -43,7 +43,7 @@ Puppet::Type.type(:resource_record).provide(:ruby) do
         records << {
           title: "#{rr[:label]} #{rr[:zone]} #{rr[:type]} #{rr[:data]}",
           ensure: 'present',
-          name: "#{rr[:label]}",
+          record: "#{rr[:label]}",
           zone:   "#{rr[:zone]}",
           type:   "#{rr[:type]}",
           data:   "#{rr[:data]}",
@@ -84,7 +84,7 @@ Puppet::Type.type(:resource_record).provide(:ruby) do
       # Delete record
       Puppet.notice("Deleting '#{resource}'")
       cmd = "echo 'zone #{resource[:zone]}
-      update delete #{resource[:name]} #{resource[:type]} #{resource[:data]}
+      update delete #{resource[:record]} #{resource[:type]} #{resource[:data]}
       send
       quit
       ' | nsupdate -4 -l"
@@ -92,9 +92,9 @@ Puppet::Type.type(:resource_record).provide(:ruby) do
     end
  
     # Create record
-    Puppet.notice("Creating '#{resource[:name]}'")
+    Puppet.notice("Creating '#{resource[:record]}'")
     cmd = "echo 'zone #{resource[:zone]}
-    update add #{resource[:name]} #{resource[:ttl]} #{resource[:type]} #{resource[:data]}
+    update add #{resource[:record]} #{resource[:ttl]} #{resource[:type]} #{resource[:data]}
     send
     quit
     ' | nsupdate -4 -l"
@@ -102,7 +102,7 @@ Puppet::Type.type(:resource_record).provide(:ruby) do
  
     # Generate PTR records for A records, but assumes the arpa zones are preexisting.
     if resource[:type] == 'A'
-      fqdn = resource[:name]
+      fqdn = resource[:record]
       if fqdn[fqdn.length - 1] != '.'
         fqdn += resource[:zone]
       end
