@@ -1,42 +1,45 @@
 # frozen_string_literal: true
 
-require 'puppet/resource_api/simple_provider'
 require 'ipaddr'
-# Implementation for the resource_record type using the Resource API.
-class Puppet::Provider::ResourceRecord::ResourceRecord < Puppet::ResourceApi::SimpleProvider
-  def initialize
+Puppet::Type.type(:resource_record).provide(:ruby) do
+  mk_resource_methods
+
+  def initialize(value = {})
+    super(value)
+    @property_flush = {}
     system('rndc', 'dumpdb', '-zones')
   end
-  def get(context)
-    context.debug("Parsing dump for existing resource records...")
+
+  def self.parse_records
+    Puppet.debug('Parsing dump for existing resource records...')
     records = []
-    currentzone = ""
-    #FIXME: location varies based on config/OS
+    currentzone = ''
+    # FIXME: location varies based on config/OS
     File.readlines('/var/cache/bind/named_dump.db').each do |line|
       if line[0] == ';' && line.length > 18
-        currentzone = line[/(?:.*?')(.*?)\//,1]
+        currentzone = line[/(?:.*?')(.*?)\//, 1]
         if currentzone.respond_to?(:to_str); currentzone = currentzone.downcase end
-        context.debug("current zone updated: #{currentzone}")
+        Puppet.debug("current zone updated: #{currentzone}")
       elsif line[0] != ';'
         line = line.strip.split(' ', 5)
         rr = {}
         rr[:label] = line[0]
-        if rr[:label].respond_to?(:to_str); rr[:label] = rr[:label].downcase end
-        context.debug("----New RR---- label: #{rr[:label]}")
+        if rr[:label].respond_to?(:to_str); rr[:label] = rr[:label].downcase.strip end
+        Puppet.debug("----New RR---- label: #{rr[:label]}")
         rr[:ttl] = line[1]
-        context.debug("RR TTL: #{rr[:ttl]}")
+        Puppet.debug("RR TTL: #{rr[:ttl]}")
         rr[:scope] = line[2]
-        context.debug("RR scope: #{rr[:scope]}")
+        Puppet.debug("RR scope: #{rr[:scope]}")
         rr[:type] = line[3]
-        context.debug("RR type: #{rr[:type]}")
+        Puppet.debug("RR type: #{rr[:type]}")
         if line[4].respond_to?(:to_str)
           rr[:data] = line[4].tr('\"', '')
         else
           rr[:data] = line[4]
         end
-        context.debug("RR data: #{rr[:data]}")
+        Puppet.debug("RR data: #{rr[:data]}")
         rr[:zone] = currentzone + '.'
-        context.debug("RR zone: #{rr[:zone]}")
+        Puppet.debug("RR zone: #{rr[:zone]}")
         records << {
           title: "#{rr[:label]} #{rr[:zone]} #{rr[:type]} #{rr[:data]}",
           ensure: 'present',
@@ -48,91 +51,79 @@ class Puppet::Provider::ResourceRecord::ResourceRecord < Puppet::ResourceApi::Si
         }
       end
     end
-    context.debug("#{records.inspect}")
+    Puppet.debug("#{records.inspect}")
     records
   end
 
-  def create(context, name, should)
-    context.notice("Creating '#{name}' with #{should.inspect}")
+  def self.instances
+    parse_records
+  end
 
-    #I dislike having to send an individual nsupdate for each record, it'd be preferable to
-    #build a request for each managed zone on run, append all records we
-    #need to act on, then send a bulk nsupdate for each zone  
-    #the delete line is temporary to prevent duplicate creations while this is in progress
-    cmd = "echo 'zone #{should[:zone]}
-    update add #{should[:record]} #{should[:ttl]} #{should[:type]} #{should[:data]}
-    send
-    quit
-    ' | nsupdate -4 -l"
-    system(cmd)
-    
-    #FIXME: This will generate PTR records, but assumes the arpa zones are preexisting. 
-    if should[:type] == "A"
-      fqdn = should[:record]
-      if fqdn[fqdn.length-1] != "."
-        fqdn = fqdn + should[:zone]
+  def create
+    @property_flush[:ensure] = :present
+  end
+
+  def exists?
+    @property_hash[:ensure] == :present
+  end
+
+  def destroy
+    @property_flush[:ensure] = :absent
+  end
+
+  def self.prefetch(resources)
+    instances.each do |prov|
+      if (resource = resources[prov.name])
+        resource.provider = prov
       end
-      reverse = IPAddr.new(should[:data]).reverse
-      cmd = "echo 'update delete #{reverse} PTR
-      update add #{reverse} #{should[:ttl]} PTR #{fqdn}
+    end
+  end
+
+  def flush
+    if @property_flush[:ensure] == :absent
+      # Delete record
+      Puppet.notice("Deleting '#{resource}'")
+      cmd = "echo 'zone #{resource[:zone]}
+      update delete #{resource[:record]} #{resource[:type]} #{resource[:data]}
       send
       quit
       ' | nsupdate -4 -l"
       system(cmd)
     end
-  end
-
-  def update(context, name, should)
-    context.notice("Updating '#{name.inspect}' with #{should.inspect}")
-    cmd = "echo 'zone #{should[:zone]}
-    update delete #{name[:record]} #{name[:type]} #{name[:data]}
-    update add #{should[:record]} #{should[:ttl]} #{should[:type]} #{should[:data]}
+ 
+    # Create record
+    Puppet.notice("Creating '#{resource[:name]}'")
+    cmd = "echo 'zone #{resource[:zone]}
+    update add #{resource[:record]} #{resource[:ttl]} #{resource[:type]} #{resource[:data]}
     send
     quit
     ' | nsupdate -4 -l"
     system(cmd)
-    if should[:type] == "A"
-      fqdn = should[:record]
-      if fqdn[fqdn.length-1] != "."
-        fqdn = fqdn + should[:zone]
+ 
+    # Generate PTR records for A records, but assumes the arpa zones are preexisting.
+    if resource[:type] == 'A'
+      fqdn = resource[:record]
+      if fqdn[fqdn.length - 1] != '.'
+        fqdn += resource[:zone]
       end
-      reverse = IPAddr.new(should[:data]).reverse
-      context.debug("fqdn: #{fqdn}")
-      context.debug("reverse: #{reverse}")
+      reverse = IPAddr.new(resource[:data]).reverse
       cmd = "echo 'update delete #{reverse} PTR
-      update add #{reverse} #{should[:ttl]} PTR #{fqdn}
+      update add #{reverse} #{resource[:ttl]} PTR #{fqdn}
       send
       quit
       ' | nsupdate -4 -l"
       system(cmd)
     end
-   end
 
-  def delete(context, name)
-    context.notice("Deleting '#{name}'")
-    cmd = "echo 'zone #{name[:zone]}
-    update delete #{name[:record]} #{name[:type]} #{name[:data]}
-    send
-    quit
-    ' | nsupdate -4 -l"
-    system(cmd)
+    # Refresh state - might not be necessary? Need to just update state on a per-resource basis
+    @property_hash = self.class.parse_records
   end
 
-  def canonicalize(_context, resources)
-    resources.each do |r|
-      _context.debug("#{r.inspect}")
-      if r[:record].respond_to?(:to_str)
-        r[:record] = r[:record].downcase.strip
-      end
-      if r[:zone].respond_to?(:to_str)
-        r[:zone] = r[:zone].downcase
-      end
-      if r[:type].respond_to?(:to_str) 
-        r[:type] = r[:type].upcase
-      end
-      if r[:data].respond_to?(:to_str)
-        r[:data] = r[:data].tr('\"', '')
-      end
-    end
+  def create
+    @property_flush[:ensure] = :present
+  end
+
+  def destroy
+    @property_flush[:ensure] = :absent
   end
 end

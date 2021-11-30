@@ -2,15 +2,23 @@
 
 require 'spec_helper'
 
-ensure_module_defined('Puppet::Provider::ResourceRecord')
 require 'puppet/provider/resource_record/resource_record'
+describe Puppet::Type.type(:resource_record).provider(:ruby) do
+  
+  let(:record) { 'test.example.com.' }
+  let(:zone) { 'example.com.' }
+  let(:type) { 'A' }
+  let(:data) { '127.0.0.1' }
+  let(:common_params) do 
+    { 
+      title: 'test.example.com._A01' 
+    } 
+  end
 
-RSpec.describe Puppet::Provider::ResourceRecord::ResourceRecord do
-  subject(:provider) { described_class.new }
-
-  let(:context) { instance_double('Puppet::ResourceApi::BaseContext', 'context') }
-
-  describe '#get' do
+  describe '.instances' do
+    before do
+      allow(Puppet::Type.type(:resource_record).provider(:ruby).to receive(:instances).and_return([provider])
+    end
     it 'processes resources' do
       expect(context).to receive(:debug).with('Returning pre-canned example data')
       expect(provider.get(context)).to eq [
