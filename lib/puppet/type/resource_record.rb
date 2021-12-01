@@ -1,6 +1,5 @@
-
 Puppet::Type.newtype(:resource_record) do
-  @doc = <<~EOS,
+  @doc = <<-DOC,
           @summary a DNS resource record type
           @example AAAA record in the example.com. zone
             resource_record { 'foo.example.com._AAAA00':
@@ -13,11 +12,52 @@ Puppet::Type.newtype(:resource_record) do
 
           **Autorequires**: If Puppet is managing the zone that this resource record belongs to,
           the resource record will autorequire the zone.
-       EOS
+         DOC
   ensurable do
     defaultvalues
     defaultto :present
   end
+
+  def self.title_patterns
+    # Cheating a bit with forcing a single title value. 
+    [
+      #foo.example.com._AAAA00
+      [
+        %r{(.*)(?: |_)+}, 
+        [
+          [:record],
+        ],
+      ],
+       #foo.example.com. example.com. A 127.0.0.1
+      [
+        %r{^(.*?\.) ([^ ]*\.) +(\w+) (.*)$}, 
+        [
+          [:record],
+          [:zone],
+          [:type],
+          [:data],
+        ],
+      ],
+        #foo.example.com. example.com. A
+      [
+        %r{^(.*?\.) (?[^ ]*\.) +(?\w+)$}, 
+        [
+          [:record],
+          [:zone],
+          [:type],
+          [:data],
+        ],
+      ],
+    ]
+  end
+  
+  validate do
+    raise ArgumentError, 'record is a required parameter.' if self[:record].nil?
+    raise ArgumentError, 'zone is a required parameter.' if self[:zone].nil?
+    raise ArgumentError, 'type is a required parameter.' if self[:type].nil?
+    raise ArgumentError, 'data is a required parameter.' if self[:data].nil?
+  end
+  
   newproperty(:record) do
     desc 'The name of the resource record, also known as the owner or label.'
     isnamevar
@@ -61,43 +101,9 @@ Puppet::Type.newtype(:resource_record) do
     desc 'The TTL for the resource record.'
   end
 
-  def self.title_patterns
-    # Cheating a bit with forcing a single title value. 
-    [[%r{(.*)(?: |_)+}m, [[:record]]]]
-  end
-  
+ 
   def name
     "#{self[:record]} #{self[:zone]} #{self[:type]} #{self[:data]}"
   end
 
-  validate do
-    message = ''
-    if original_parameters[:record].nil?
-      message += 'record is a required parameter. '
-    end
-    if original_parameters[:zone].nil?
-      message += 'zone is a required parameter. '
-    end
-    if original_parameters[:type].nil?
-      message += 'type is a required parameter. '
-    end
-    if original_parameters[:data].nil?
-      message += 'data is a required parameter. '
-    end
-    if message != ''
-      raise(Puppet::Error, message)
-    end
-  end
 end
-
-    #  desc: 'full name, space, zone (explicitly defined), space, type, space, data',
-    #  pattern: %r{^(?<record>.*?\.) (?<zone>[^ ]*\.) +(?<type>\w+) (?<data>.*)$},
-    #  desc: 'full name, space, zone (explicitly defined), space, type',
-    #  pattern: %r{^(?<record>.*?\.) (?<zone>[^ ]*\.) +(?<type>\w+)$},
-    #  desc: 'name and zone (everything after the first dot)',
-    #  pattern: %r{^(?<record>.*?[^.])\.(?<zone>.*\.)$},
-    #  desc: 'short name (not FQDN), space, type',
-    #  pattern: %r{^(?<record>.*[^ ]) +(?<type>.*)$},
-    #  desc: 'name only',
-    #  pattern: %r{^(?<record>.*)$},
- 

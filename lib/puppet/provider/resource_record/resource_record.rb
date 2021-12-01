@@ -76,6 +76,7 @@ Puppet::Type.type(:resource_record).provide(:ruby) do
   def self.prefetch(resources)
     Puppet.debug("----  Prefetch start  ----")
     instances.each do |prov|
+      Puppet.debug("#{prov}")
       if (resource = resources[prov.name])
         resource.provider = prov
       end
