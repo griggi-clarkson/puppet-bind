@@ -66,7 +66,7 @@ Puppet::Type.newtype(:resource_record) do
     [[%r{(.*)(?: |_)+}m, [[:record]]]]
   end
   
-  def self.name
+  def name
     "#{self[:record]} #{self[:zone]} #{self[:type]} #{self[:data]}"
   end
 
