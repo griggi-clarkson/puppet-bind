@@ -1,11 +1,9 @@
 
-require 'puppet/resource_api'
-
 Puppet::Type.newtype(:resource_record) do
   @doc = <<~EOS,
           @summary a DNS resource record type
           @example AAAA record in the example.com. zone
-            resource_record { 'foo.example.com.':
+            resource_record { 'foo.example.com._AAAA00':
               ensure => 'present',
               type   => 'AAAA',
               data   => '2001:db8::1',
@@ -15,11 +13,10 @@ Puppet::Type.newtype(:resource_record) do
 
           **Autorequires**: If Puppet is managing the zone that this resource record belongs to,
           the resource record will autorequire the zone.
-        EOS
-  ensurable
-  def name
-  # whoever wrote the documentation for puppet providers and types should be drawn and quartered
-    "#{self[:record]} #{self[:zone]} #{self[:type]} #{self[:data]}"
+       EOS
+  ensurable do
+    defaultvalues
+    defaultto :present
   end
   newproperty(:record) do
     desc 'The name of the resource record, also known as the owner or label.'
@@ -64,12 +61,35 @@ Puppet::Type.newtype(:resource_record) do
     desc 'The TTL for the resource record.'
   end
 
-
   def self.title_patterns
     # Cheating a bit with forcing a single title value. 
     [[%r{(.*)(?: |_)+}m, [[:record]]]]
   end
+  
+  def self.name
+    "#{self[:record]} #{self[:zone]} #{self[:type]} #{self[:data]}"
+  end
+
+  validate do
+    message = ''
+    if original_parameters[:record].nil?
+      message += 'record is a required parameter. '
+    end
+    if original_parameters[:zone].nil?
+      message += 'zone is a required parameter. '
+    end
+    if original_parameters[:type].nil?
+      message += 'type is a required parameter. '
+    end
+    if original_parameters[:data].nil?
+      message += 'data is a required parameter. '
+    end
+    if message != ''
+      raise(Puppet::Error, message)
+    end
+  end
 end
+
     #  desc: 'full name, space, zone (explicitly defined), space, type, space, data',
     #  pattern: %r{^(?<record>.*?\.) (?<zone>[^ ]*\.) +(?<type>\w+) (?<data>.*)$},
     #  desc: 'full name, space, zone (explicitly defined), space, type',
