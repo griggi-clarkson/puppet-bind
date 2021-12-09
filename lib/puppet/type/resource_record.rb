@@ -40,7 +40,7 @@ Puppet::Type.newtype(:resource_record) do
       ],
         #foo.example.com. example.com. A
       [
-        %r{^(.*?\.) (?[^ ]*\.) +(?\w+)$}, 
+        %r{^(.*?\.) ([^ ]*\.) +(\w+)$}, 
         [
           [:record],
           [:zone],
