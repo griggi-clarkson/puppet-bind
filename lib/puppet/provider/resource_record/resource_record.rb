@@ -89,6 +89,7 @@ class Puppet::Provider::ResourceRecord::ResourceRecord < Puppet::ResourceApi::Si
     # FIXME: This will generate PTR records, but assumes the arpa zones are preexisting.
     if (should[:type] == 'A') && !(@heldptr.key? should[:data])
       if should[:holdptr] == 'true'
+        context.debug("Adding sticky PTR entry for #{should[:data]}->#{should[:record]}")
         @heldptr[should[:data]] = should[:holdptr]
       end
       fqdn = should[:record]
@@ -135,6 +136,7 @@ class Puppet::Provider::ResourceRecord::ResourceRecord < Puppet::ResourceApi::Si
     system(cmd)
     if (should[:type] == 'A') && !(@heldptr.key? should[:data])
       if should[:holdptr] == 'true'
+        context.debug("Adding sticky PTR entry for #{should[:data]}->#{should[:record]}")
         @heldptr[should[:data]] = should[:holdptr]
       end
       fqdn = should[:record]
