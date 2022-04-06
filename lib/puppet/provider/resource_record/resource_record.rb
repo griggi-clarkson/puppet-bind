@@ -19,7 +19,7 @@ class Puppet::Provider::ResourceRecord::ResourceRecord < Puppet::ResourceApi::Si
       if line[0] == ';' && line.length > 18
         currentzone = line[%r{(?:.*?')(.*?)\/}, 1]
         if currentzone.respond_to?(:to_str); currentzone = currentzone.downcase end
-        # Puppet.debug("current zone updated: #{currentzone}")
+        Puppet.debug("current zone updated: #{currentzone}")
       elsif line[0] != ';'
         line = line.strip.split(' ', 5)
         rr = {}
@@ -85,9 +85,9 @@ class Puppet::Provider::ResourceRecord::ResourceRecord < Puppet::ResourceApi::Si
     system(cmd)
 
     # FIXME: This will generate PTR records, but assumes the arpa zones are preexisting.
-    if (should[:type] == 'A') && !(@heldptr.key? should[:record])
+    if (should[:type] == 'A') && !(@heldptr.key? should[:data])
       if should[:holdptr] == 'true'
-        @heldptr[should[:record]] = should[:holdptr]
+        @heldptr[should[:data]] = should[:holdptr]
       end
       fqdn = should[:record]
       if fqdn[fqdn.length - 1] != '.'
@@ -131,9 +131,9 @@ class Puppet::Provider::ResourceRecord::ResourceRecord < Puppet::ResourceApi::Si
             ' | nsupdate -4 -l"
           end
     system(cmd)
-    if (should[:type] == 'A') && !(@heldptr.key? should[:record])
+    if (should[:type] == 'A') && !(@heldptr.key? should[:data])
       if should[:holdptr] == 'true'
-        @heldptr[should[:record]] = should[:holdptr]
+        @heldptr[should[:data]] = should[:holdptr]
       end
       fqdn = should[:record]
       if fqdn[fqdn.length - 1] != '.'
