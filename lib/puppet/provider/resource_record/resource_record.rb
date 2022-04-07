@@ -87,22 +87,24 @@ class Puppet::Provider::ResourceRecord::ResourceRecord < Puppet::ResourceApi::Si
     system(cmd)
 
     # FIXME: This will generate PTR records, but assumes the arpa zones are preexisting.
-    if (should[:type] == 'A') && !(@heldptr.key? should[:data])
-      if should[:holdptr] == 'true'
-        context.debug("Adding sticky PTR entry for #{should[:data]}->#{should[:record]}")
-        @heldptr[should[:data]] = should[:holdptr]
+    if (should[:type] == 'A') 
+      unless @heldptr.key? should[:data].to_sym
+        if should[:holdptr]
+          context.debug("Adding sticky PTR entry for #{should[:data]}->#{should[:record]}")
+          @heldptr[should[:data].to_sym] = should[:holdptr]
+        end
+        fqdn = should[:record]
+        if fqdn[fqdn.length - 1] != '.'
+          fqdn += should[:zone]
+        end
+        reverse = IPAddr.new(should[:data]).reverse
+        cmd = "echo 'update delete #{reverse} PTR
+        update add #{reverse} #{should[:ttl]} PTR #{fqdn}
+        send
+        quit
+        ' | nsupdate -4 -l"
+        system(cmd)
       end
-      fqdn = should[:record]
-      if fqdn[fqdn.length - 1] != '.'
-        fqdn += should[:zone]
-      end
-      reverse = IPAddr.new(should[:data]).reverse
-      cmd = "echo 'update delete #{reverse} PTR
-      update add #{reverse} #{should[:ttl]} PTR #{fqdn}
-      send
-      quit
-      ' | nsupdate -4 -l"
-      system(cmd)
     end
     @records << {
       title: "#{should[:record]} #{should[:zone]} #{should[:type]} #{should[:data]}",
@@ -134,24 +136,26 @@ class Puppet::Provider::ResourceRecord::ResourceRecord < Puppet::ResourceApi::Si
             ' | nsupdate -4 -l"
           end
     system(cmd)
-    if (should[:type] == 'A') && !(@heldptr.key? should[:data])
-      if should[:holdptr] == 'true'
-        context.debug("Adding sticky PTR entry for #{should[:data]}->#{should[:record]}")
-        @heldptr[should[:data]] = should[:holdptr]
+    if (should[:type] == 'A') 
+      unless (@heldptr.key? should[:data].to_sym)
+        if should[:holdptr]
+          context.debug("Adding sticky PTR entry for #{should[:data]}->#{should[:record]}")
+          @heldptr[should[:data].to_sym] = should[:record]
+        end
+        fqdn = should[:record]
+        if fqdn[fqdn.length - 1] != '.'
+          fqdn += should[:zone]
+        end
+        reverse = IPAddr.new(should[:data]).reverse
+        context.debug("fqdn: #{fqdn}")
+        context.debug("reverse: #{reverse}")
+        cmd = "echo 'update delete #{reverse} PTR
+        update add #{reverse} #{should[:ttl]} PTR #{fqdn}
+        send
+        quit
+        ' | nsupdate -4 -l"
+        system(cmd)
       end
-      fqdn = should[:record]
-      if fqdn[fqdn.length - 1] != '.'
-        fqdn += should[:zone]
-      end
-      reverse = IPAddr.new(should[:data]).reverse
-      context.debug("fqdn: #{fqdn}")
-      context.debug("reverse: #{reverse}")
-      cmd = "echo 'update delete #{reverse} PTR
-      update add #{reverse} #{should[:ttl]} PTR #{fqdn}
-      send
-      quit
-      ' | nsupdate -4 -l"
-      system(cmd)
     end
     @records.reject! { |rr| rr[:title] == "#{name[:record]} #{name[:zone]} #{name[:type]} #{name[:data]}" }
     @records << {
