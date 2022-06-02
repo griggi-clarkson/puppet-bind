@@ -8,7 +8,7 @@ class Puppet::Provider::ResourceRecord::ResourceRecord < Puppet::ResourceApi::Si
     super()
     system('rndc', 'dumpdb', '-zones')
     # Have to wait to ensure file is actually populated...embarrassingly this was the source of much wheel spinning.
-    sleep(2)
+    #sleep(2)
     Puppet.debug('Parsing dump for existing resource records...')
     @records = []
     @heldptr = {}
