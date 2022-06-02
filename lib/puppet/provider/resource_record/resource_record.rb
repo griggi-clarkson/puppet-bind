@@ -8,10 +8,11 @@ class Puppet::Provider::ResourceRecord::ResourceRecord < Puppet::ResourceApi::Si
     super()
     system('rndc', 'dumpdb', '-zones')
     # Have to wait to ensure file is actually populated...embarrassingly this was the source of much wheel spinning.
-    sleep(2)
+    sleep(0)
     Puppet.debug('Parsing dump for existing resource records...')
     @records = []
     @heldptr = {}
+    @canonicalized = false
     currentzone = ''
     # FIXME: location varies based on config/OS
     unless File.exist?('/var/cache/bind/named_dump.db')
@@ -183,8 +184,9 @@ class Puppet::Provider::ResourceRecord::ResourceRecord < Puppet::ResourceApi::Si
 
   def canonicalize(context, resources)
     Puppet.debug("canonicalize called, context: #{context}")
+    return resources if @canonicalized
     resources.each do |r|
-      context.debug(r.inspect)
+      # context.debug(r.inspect)
       if r[:record].respond_to?(:to_str)
         r[:record] = r[:record].downcase.strip
       end
@@ -198,5 +200,7 @@ class Puppet::Provider::ResourceRecord::ResourceRecord < Puppet::ResourceApi::Si
         r[:data] = r[:data].tr('\"', '')
       end
     end
+    @canonicalized = true
+    return resources
   end
 end
